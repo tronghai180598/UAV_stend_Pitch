@@ -1,7 +1,5 @@
-// Copyright (c) 2023 Oleg Kalachev <okalachev@gmail.com>
-// Repository: https://github.com/okalachev/flix
-
-// PID controller implementation
+// pid.h — каскадный PID (внешний угол → внутренний rate).
+// D-член фильтруется ФНЧ при LPF_En ≥ 0.5 (lpfAlpha из imu.ino).
 
 #pragma once
 #include "lpf.h"
@@ -16,7 +14,7 @@ public:
 	float derivative = 0;
 	float integral = 0;
 
-	LowPassFilter<float> lpf; // low pass filter for derivative term
+	LowPassFilter<float> lpf; // ФНЧ для D-составляющей
 
 	PID(float p, float i, float d, float windup = 0, float dAlpha = 1, float dtMax = 0.1) :
 		p(p), i(i), d(d), windup(windup), lpf(dAlpha), dtMax(dtMax) {}
@@ -36,7 +34,7 @@ public:
 		prevError = error;
 		prevTime = t;
 
-		return p * error + constrain(i * integral, -windup, windup) + d * derivative; // PID
+		return p * error + constrain(i * integral, -windup, windup) + d * derivative; // выход PID
 	}
 
 	void reset() {

@@ -18,7 +18,8 @@ class QTabWidget;
 class QLineEdit;
 class QPushButton;
 
-/// Qt ground station for bench pitch control (serial CLI to ESP32 via USB).
+/// Наземная станция Qt для стенда pitch (1 степень свободы).
+/// Связь: ПК → USB → ESP8266 → UART → ESP32; текстовые CLI-команды @ 115200.
 class Dialog : public QDialog
 {
     Q_OBJECT
@@ -45,44 +46,45 @@ private:
     Ui::Dialog *ui;
     QSerialPort *serialPort;
 
-    // Live pitch telemetry plot (log mode 1)
+    // --- Живой график телеметрии pitch (режим log 1) ---
     QVector<double> logTime2;
-    QVector<double> logM2_pitchThetaRad;   // values are degrees (legacy name)
-    QVector<double> logM2_pitchOmegaRadS;  // values are deg/s
+    QVector<double> logM2_pitchThetaRad;   // фактически градусы (историческое имя)
+    QVector<double> logM2_pitchOmegaRadS;  // град/с
     QVector<double> logM2_torqueY1000;
     double logIndex2 = 0.0;
-    int currentLogMode = 0;  // 0 = off, 1 = live pitch telemetry
-    bool capturingParams = false;
+    int currentLogMode = 0;  // 0 = выкл., 1 = поток pitch θ/ω/момент
+    bool capturingParams = false;  // режим вывода Flash через «Get parameters»
 
+    // Последние значения телеметрии (для частичной маски каналов)
     int m_lastTelPitchMilliRad = 0;
     int m_lastTelPitchOmegaMilli = 0;
     int m_lastTelUy = 0;
 
     bool isArmed = false;
-    bool m_manualMode = false;
-    bool m_uavLinkAlive = false;
+    bool m_manualMode = false;       // ручной режим (Disable → Front/Rear)
+    bool m_uavLinkAlive = false;     // ESP32 отвечает (не только открыт USB)
     qint64 m_lastFirmwareRxMs = 0;
-    QTimer *m_linkProbeTimer = nullptr;
+    QTimer *m_linkProbeTimer = nullptr;  // опрос связи командой sys
 
-    // TakeLog CSV dump from firmware buffer
+    // --- Приём буфера TakeLog с борта (команда takelog) ---
     bool m_receivingTakeLog = false;
     bool m_takeLogStarted = false;
     int m_takeLogExpected = -1;
     QStringList m_takeLogRawLines;
 
-    // 3D attitude view
+    // --- 3D-вид квадрокоптера (uav.stl) ---
     Qt3DExtras::Qt3DWindow *m_view3d = nullptr;
     QWidget *m_viewContainer = nullptr;
     Qt3DCore::QEntity *m_root3d = nullptr;
     Qt3DCore::QTransform *m_uavTf = nullptr;
     QQuaternion m_modelOffset = QQuaternion();
     float m_pitchDegFiltered = 0.0f;
-    float m_attAlpha = 0.25f;
-    float m_rollSign = -1.0f;
-    float m_pitchSign = 1.0f;
+    float m_attAlpha = 0.25f;   // сглаживание угла для 3D
+    float m_rollSign = -1.0f;   // знак оси roll в модели STL
+    float m_pitchSign = 1.0f;   // знак оси pitch в модели STL
     qint64 m_lastTelemetryRedrawMs = 0;
 
-    // Control tabs (PD-PI / PID / SMC) built at runtime
+    // --- Вкладки регуляторов (создаются в runtime) ---
     QTabWidget *m_ctrlTabs = nullptr;
     QWidget *m_tabPdPi = nullptr;
     QWidget *m_tabPid = nullptr;
@@ -91,7 +93,7 @@ private:
     QPushButton *m_btnCtrlPid = nullptr;
     QPushButton *m_btnCtrlSmc = nullptr;
     QPushButton *m_btnSetDefault = nullptr;
-    int m_ctrlAlgMode = 0;  // 0 = PD-PI, 1 = PID, 2 = SMC
+    int m_ctrlAlgMode = 0;  // 0 = PD-PI, 1 = каскадный PID, 2 = SMC
     QLineEdit *m_pidPitchP = nullptr;
     QLineEdit *m_pidPitchI = nullptr;
     QLineEdit *m_pidPitchD = nullptr;
@@ -108,31 +110,37 @@ private:
     QLineEdit *m_smcLpfAlpha = nullptr;
     QLineEdit *m_smcLpfTau = nullptr;
 
-    void setupRuntimeLayout();
-    void setupParamFieldWiring();
-    void setupSerialLink();
-    void setupControlTabs();
-    void setupCtrlAlgOutsideTabs();
-    void setupPitchTelemetryPlot();
+    // Инициализация UI и связей
+    void setupRuntimeLayout();       // смещение виджетов (DPI, стенд)
+    void setupParamFieldWiring();    // Enter → отправка параметра на борт
+    void setupSerialLink();          // порт, таймер probe, readyRead
+    void setupControlTabs();         // PD-PI / Classic PID / SMC
+    void setupCtrlAlgOutsideTabs();  // кнопки Control mode под вкладками
+    void setupPitchTelemetryPlot();  // QCustomPlot: θ, ω, момент
 
+    // Связь и безопасность
     void updateArmUi();
     void updateSerialUi();
     void setUavLinkAlive(bool alive);
     void noteFirmwareRx(const QString &line);
     void probeUavLink();
     void openSerial();
-    void applyDefaultPitchOnlyChannels();
+    void applyDefaultPitchOnlyChannels();  // dscnl: только pitch
     void exitManualMode();
+
+    // Параметры → ESP32 Flash (через CLI p / save)
     void sendParamFromField(QLineEdit *field, const QString &paramName,
                             int precision, bool saveAfter);
     void sendParamIfValid(QLineEdit *field, const QString &paramName);
     void sendPdPiParams();
     void sendAllParams();
     void resetControllerDefaults();
-    void startLiveLog();
-    void syncPitchSourceToFirmware();
+    void syncPitchSourceToFirmware();  // QuatEn + LPF_En по радиокнопкам
     void sendCommand(const QString &cmd);
     void setCtrlAlgMode(int mode, bool sendToFirmware);
+
+    // Телеметрия и графики
+    void startLiveLog();
     void setPlotLegendCheckboxesVisible(bool visible);
     void setPitchTelCheckboxesVisible(bool visible);
     void syncPitchTelMaskToFirmware();
@@ -143,6 +151,8 @@ private:
     void saveTakeLog();
     void resetTakeLogReceiveState();
     static bool isTakeLogDataLine(const QString &line);
+
+    // 3D-модель
     void initUav3D(QWidget *host);
     void setUavAttitudeDeg(float rollDeg, float pitchDeg);
 };

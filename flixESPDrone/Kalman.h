@@ -18,42 +18,37 @@
 #ifndef _Kalman_h_
 #define _Kalman_h_
 
+// Фильтр Калмана для угла pitch (1D: угол + смещение gyro).
+// Настройка: KQang (Q), KQbias, KRmeas (R) — через Flash и Qt.
+
 class Kalman {
 public:
     Kalman();
 
-    // Angle (rad), rate (rad/s), dt (s)
+    // newAngle — acc (рад), newRate — gyro (рад/с), dt — с
     float getAngle(float newAngle, float newRate, float dt);
 
-    void setAngle(float angle); // Used to set angle, this should be set as the starting angle
-    float getRate(); // Return the unbiased rate
+    void setAngle(float angle); // начальный угол при смене режима
+    float getRate(); // оценка скорости без смещения
 
-    /* These are used to tune the Kalman filter */
-    void setQangle(float Q_angle);
-    /**
-     * setQbias(float Q_bias)
-     * Default value (0.003f) is in Kalman.cpp. 
-     * Raise this to follow input more closely,
-     * lower this to smooth result of kalman filter.
-     */
-    void setQbias(float Q_bias);
-    void setRmeasure(float R_measure);
+    void setQangle(float Q_angle);  // шум процесса угла
+    void setQbias(float Q_bias);    // шум смещения gyro (по умолчанию 0.003)
+    void setRmeasure(float R_measure); // шум измерения acc
 
     float getQangle();
     float getQbias();
     float getRmeasure();
 
 private:
-    /* Kalman filter variables */
-    float Q_angle; // Process noise variance for the accelerometer
-    float Q_bias; // Process noise variance for the gyro bias
-    float R_measure; // Measurement noise variance - this is actually the variance of the measurement noise
+    float Q_angle;   // дисперсия шума процесса угла
+    float Q_bias;    // дисперсия шума смещения gyro
+    float R_measure; // дисперсия шума измерения acc
 
-    float angle; // The angle calculated by the Kalman filter - part of the 2x1 state vector
-    float bias; // The gyro bias calculated by the Kalman filter - part of the 2x1 state vector
-    float rate; // Unbiased rate calculated from the rate and the calculated bias - you have to call getAngle to update the rate
+    float angle; // оценка угла (состояние фильтра)
+    float bias;  // оценка смещения gyro
+    float rate;  // скорость без смещения
 
-    float P[2][2]; // Error covariance matrix - This is a 2x2 matrix
+    float P[2][2]; // ковариация ошибки 2×2
 };
 
 #endif

@@ -1,7 +1,7 @@
-// Copyright (c) 2023 Oleg Kalachev <okalachev@gmail.com>
-// Repository: https://github.com/okalachev/flix
-
-// In-RAM logging
+// log.ino — телеметрия по UART и кольцевой буфер TakeLog (~6000 отсчётов).
+//
+// log 1/2: до 50 Гц, маска pitchTelMask (θ milli-rad, ω decideg/s, момент×1000).
+// takelog: неблокирующий дамп CSV → TAKELOG_START … TAKELOG_END.
 
 #include "vector.h"
 #include "util.h"
@@ -11,9 +11,9 @@
 #define LOG_DURATION 5
 #define LOG_SIZE LOG_DURATION * LOG_RATE
 
-// ---- High-rate circular buffer (Take Log) ----
-// int16_t × 3 × 6000 = 36 KB; covers ~6s @1000Hz or ~12s @500Hz
-// pitch: ×10000 (0.0001 rad res), gyro: raw LSB, torque: ×10000
+// ---- Кольцевой буфер Take Log ----
+// int16×3×6000 ≈ 36 КБ; ~6 с при частоте IMU ~1 кГц
+// pitch: ×10000 (рад), gyro: decideg/s, torque: ×10000 (норм. ±1)
 #define TAKELOG_SIZE 6000
 
 struct TakeLogEntry {
@@ -26,7 +26,7 @@ static TakeLogEntry takeLogBuf[TAKELOG_SIZE];
 static int          takeLogPtr  = 0;
 static bool         takeLogFull = false;
 
-/** UART telemetry line rate (Hz) — higher shows noise better; lower if lag (115200 ~120 Hz max for short lines). */
+/** Частота строк телеметрии на UART (Гц). 115200: ~50 Гц для коротких строк. */
 #define SERIAL_TELEMETRY_HZ 50.0f
 
 extern Vector gyroBc;
@@ -52,7 +52,7 @@ float logBuffer[LOG_SIZE][logColumns];
 
 int glog = 0;
 
-/** Bitmask UART pitch log: θ=getPitchAngle()×1000 (milli-rad, per QuatEn), ω=gyroBc.y×572.958 (deci-deg/s), u×1000. */
+/** Битовая маска каналов pitch в log 1: bit0=θ, bit1=ω, bit2=момент. */
 uint8_t pitchTelMask = 7;
 
 static constexpr float kLivePitchScale = 1000.0f;            // rad → milli-rad

@@ -1,3 +1,12 @@
+// dialog.cpp — наземная станция Qt_Flix для стенда UAV (pitch).
+//
+// Поток работы при старте:
+//   setupUi → раскладка → график → привязка полей → источник pitch → вкладки регуляторов
+//   → 3D → serial → disarm → pitch-only → sendAllParams → syncPitchSource → Log on
+//
+// Протокол: текстовые строки CLI (arm, disarm, p <имя> <значение>, dscnl, log, takelog, …).
+// Порт по умолчанию: /dev/ttyUSB0 @ 115200 (ESP8266 USB-мост к ESP32).
+
 #include "dialog.h"
 #include "ui_dialog.h"
 #include <QFile>
@@ -28,6 +37,7 @@
 
 namespace {
 
+// Строка похожа на ответ прошивки (не телеметрия) — для определения «живой» связи.
 bool looksLikeFirmwareLine(const QString &line)
 {
     static const QStringList markers = {
@@ -52,6 +62,7 @@ bool looksLikeFirmwareLine(const QString &line)
     return false;
 }
 
+// Строка из 1–3 целых чисел — поток log 1 (pitch θ, ω, момент).
 bool looksLikeFirmwareTelemetry(const QString &line, int logMode)
 {
     if (logMode == 0)
@@ -70,10 +81,11 @@ bool looksLikeFirmwareTelemetry(const QString &line, int logMode)
 
 } // namespace
 
-static constexpr char kSerialPort[] = "/dev/ttyUSB0";
+static constexpr char kSerialPort[] = "/dev/ttyUSB0";  // USB-мост ESP8266
 static constexpr char kSettingsOrg[] = "UAV_Lon_ESP8266";
 static constexpr char kSettingsApp[] = "Qt_Flix";
 
+// Масштабы телеметрии: борт шлёт milli-rad и decideg/s; UI — градусы.
 static constexpr float kMilliRadToRad = 1e-3f;
 static constexpr float kRadToDeg = float(180.0 / 3.14159265358979323846);
 static constexpr double kDegToMilliRad = 1000.0 * 3.14159265358979323846 / 180.0;
@@ -95,9 +107,10 @@ static void wireChoiceStyle(QAbstractButton *btn)
     });
 }
 
-/// 0 = replot every telemetry sample (max noise detail); >0 ms to limit CPU (e.g. 16).
+// Интервал перерисовки графика (мс): 0 = каждый отсчёт; >0 — ограничить нагрузку на CPU.
 static constexpr qint64 kTelemetryRedrawIntervalMs = 0;
 
+// Поиск flixESPDrone/uav.stl относительно каталога запуска Qt_Flix.
 static QString resolveUavStlPath()
 {
     QDir dir(QCoreApplication::applicationDirPath());
@@ -149,6 +162,7 @@ Dialog::Dialog(QWidget *parent)
     setPitchTelCheckboxesVisible(true);
     setupParamFieldWiring();
 
+    // --- Источник угла pitch: Quaternion vs No Quaternion + LPF_En ---
     connect(ui->rbQuaternion, &QRadioButton::toggled, this, [this](bool checked) {
         if (!checked) return;
         ui->rbCompFilt->setEnabled(false);
@@ -191,6 +205,7 @@ Dialog::Dialog(QWidget *parent)
         sendCommand("save");
     });
 
+    // Ручной режим: смещение передних/задних моторов (mfront / mrear).
     connect(ui->sliderManualFront, &QSlider::valueChanged, this, [this](int val) {
         ui->progressManualFront->setValue(val);
         sendCommand(QString("mfront %1").arg(val));
@@ -200,6 +215,7 @@ Dialog::Dialog(QWidget *parent)
         sendCommand(QString("mrear %1").arg(val));
     });
 
+    // IMU Filter: LPF_En = 0/1/2/3 → No LPF / Use LPF / Complementary / Kalman
     connect(ui->rbUseLPF, &QRadioButton::toggled, this, [this](bool checked) {
         if (checked) {
             sendCommand("p LPF_En 1");
@@ -231,7 +247,7 @@ Dialog::Dialog(QWidget *parent)
     currentLogMode = 0;
     initUav3D(ui->uav3dHost);
 
-    // Thrust: 0..1000
+    // Тяга: слайдер 0..1000 → mtr 4; метка в процентах (value/10).
     ui->verticalSliderThrust->setMinimum(0);
     ui->verticalSliderThrust->setMaximum(1000);
     ui->verticalSliderThrust->setValue(0);
@@ -241,6 +257,7 @@ Dialog::Dialog(QWidget *parent)
     updateArmUi();
     setupSerialLink();
 
+    // Безопасный старт сеанса: disarm, только pitch, загрузка параметров, живой график.
     sendCommand(QStringLiteral("disarm"));
     applyDefaultPitchOnlyChannels();
     sendAllParams();
@@ -248,6 +265,7 @@ Dialog::Dialog(QWidget *parent)
     startLiveLog();
 }
 
+// Смещение виджетов стенда (см → пиксели по DPI): Disable/Pitch on, «Желаемый угол», Dump Log.
 void Dialog::setupRuntimeLayout()
 {
     constexpr int kDisableW = 141;
@@ -285,6 +303,7 @@ void Dialog::setupRuntimeLayout()
                                 dumpBtn.width(), dumpBtn.height());
 }
 
+// Enter в поле → p <Flash-имя> <значение>; SetPt — градусы → millirad.
 void Dialog::setupParamFieldWiring()
 {
     struct FieldWire {
@@ -335,6 +354,7 @@ void Dialog::setupParamFieldWiring()
     });
 }
 
+// Открытие порта, таймер probe (sys каждые 2 с), разбор входящих строк.
 void Dialog::setupSerialLink()
 {
     m_linkProbeTimer = new QTimer(this);
@@ -390,7 +410,7 @@ Dialog::~Dialog()
 
 void Dialog::openSerial()
 {
-    // ESP8266/ESP32 port name — check with `ls /dev/ttyUSB*`
+    // Имя порта ESP8266 — проверить: ls /dev/ttyUSB*
     serialPort->setPortName(QString::fromLatin1(kSerialPort));
     serialPort->setBaudRate(QSerialPort::Baud115200);
     serialPort->setDataBits(QSerialPort::Data8);
@@ -441,6 +461,7 @@ void Dialog::probeUavLink()
     sendCommand(QStringLiteral("sys"));
 }
 
+// Connected = порт открыт И прошивка отвечала недавно (таймаут 5 с в probeUavLink).
 void Dialog::updateSerialUi()
 {
     const bool connected = serialPort->isOpen() && m_uavLinkAlive;
@@ -465,7 +486,7 @@ void Dialog::applyDefaultPitchOnlyChannels()
 
     if (!serialPort->isOpen())
         return;
-    // Disable roll/yaw torque first, then enable pitch (matches bench default; pitch-on resets controllers).
+    // Стенд: roll/yaw выкл., pitch вкл. (dscnl 2 0 сбрасывает регуляторы).
     sendCommand("dscnl 1 1");
     sendCommand("dscnl 3 1");
     sendCommand("dscnl 2 0");
@@ -566,7 +587,7 @@ void Dialog::resetControllerDefaults()
             le->setText(text);
     };
 
-    // PD-PI (bench defaults from dialog.ui)
+    // PD-PI (значения по умолчанию из dialog.ui)
     setLe(ui->lineEdit_Kal_roll,      QStringLiteral("0.05"));
     setLe(ui->lineEdit_Kal_gyroroll,  QStringLiteral("0.05"));
     setLe(ui->lineEdit_Kal_pitch,     QStringLiteral("0.1"));
@@ -588,7 +609,7 @@ void Dialog::resetControllerDefaults()
     setLe(ui->lineEdit_PTE,           QStringLiteral("0.015"));
     setLe(ui->lineEdit_PTM,           QStringLiteral("0.05"));
 
-    // Classic PID pitch cascade
+    // Каскадный PID pitch (стенд)
     setLe(m_pidPitchP,     QStringLiteral("2.5"));
     setLe(m_pidPitchI,     QStringLiteral("0.0"));
     setLe(m_pidPitchD,     QStringLiteral("0.0"));
@@ -624,10 +645,11 @@ void Dialog::resetControllerDefaults()
     ui->textEditLog->append(QStringLiteral("Set Default: controller coefficients restored."));
 }
 
+// Вкладки PD-PI (виджеты из .ui), Classic PID и SMC; кнопка Set Default.
 void Dialog::setupControlTabs()
 {
     m_ctrlTabs = new QTabWidget(this);
-    constexpr int kGetParamsColumnLeft = 420;  // textEditLog / Get parameters — do not overlap
+    constexpr int kGetParamsColumnLeft = 420;  // не перекрывать textEditLog / Get parameters
     constexpr int kPanelMargin = 10;
     constexpr int kPanelBaseY = 282;
     const int yShift = qRound(3.0 / 2.54 * logicalDpiY());
@@ -806,6 +828,7 @@ void Dialog::setupControlTabs()
     });
 }
 
+// Кнопки PD-PI / PID / SMC под вкладками (Control mode); CtrlAlg → Flash.
 void Dialog::setupCtrlAlgOutsideTabs()
 {
     constexpr int modeLeft = 10;
@@ -977,6 +1000,7 @@ void Dialog::setUavAttitudeDeg(float rollDeg, float pitchDeg)
     m_uavTf->setRotation(qRoll * qPitch * m_modelOffset);
 }
 
+// Инициализация QCustomPlot: pitch θ (°), pitch ω (°/с), момент pitch.
 void Dialog::setupPitchTelemetryPlot()
 {
     ui->customPlot->clearGraphs();
@@ -1056,8 +1080,7 @@ bool Dialog::isTakeLogDataLine(const QString &line)
 
 void Dialog::on_btnSaveLog_clicked()
 {
-    // Send takelog → ESP32 dumps circular buffer at max rate over Serial.
-    // Qt receives TAKELOG_START … TAKELOG_END then saves CSV in saveTakeLog().
+    // takelog → TAKELOG_START … CSV … TAKELOG_END → saveTakeLog() на ПК.
     if (m_receivingTakeLog)
         return;  // already receiving, do not resend
     if (!serialPort->isOpen()) {
@@ -1073,6 +1096,7 @@ void Dialog::on_btnSaveLog_clicked()
     sendCommand("takelog");
 }
 
+// Сохранение CSV в log/takelog_*.csv с пересчётом масштаба int16 → физ. единицы.
 void Dialog::saveTakeLog()
 {
     QString baseDir = QDir::homePath() + "/Documents/UAV_Projects/project_quad/UAV_Lon_ESP8266/log";
@@ -1133,7 +1157,7 @@ void Dialog::saveTakeLog()
 void Dialog::updateArmUi()
 {
     if (isArmed) {
-        // ARM button red, DISARM gray
+        // ARM: красная кнопка START, статус ARMED
         ui->push_arm->setStyleSheet("background-color: red; color: white; font-weight: bold;");
         ui->push_disarm->setStyleSheet("");
 
@@ -1158,12 +1182,13 @@ void Dialog::resetTakeLogReceiveState()
     ui->btnSaveLog->setText(QStringLiteral("Dump Log"));
 }
 
+// Разбор одной строки с UART: TakeLog, телеметрия log 1, ответы p/sys.
 void Dialog::handleLogLine(const QString &line)
 {
     if (looksLikeFirmwareLine(line) || looksLikeFirmwareTelemetry(line, currentLogMode))
         noteFirmwareRx(line);
 
-    // ---- high-rate dump from takelog command ----
+    // ---- приём высокоскоростного дампа takelog ----
     if (m_receivingTakeLog) {
         if (line.startsWith(QStringLiteral("TAKELOG_START"))) {
             m_takeLogStarted = true;
@@ -1180,7 +1205,7 @@ void Dialog::handleLogLine(const QString &line)
         if (line == QStringLiteral("TAKELOG_END")) {
             m_receivingTakeLog = false;
             m_takeLogStarted   = false;
-            saveTakeLog();              // must run before clear — lines live in m_takeLogRawLines
+            saveTakeLog();              // до очистки буфера строк
             resetTakeLogReceiveState();
             return;
         }
@@ -1188,12 +1213,12 @@ void Dialog::handleLogLine(const QString &line)
             m_takeLogRawLines.append(line);
             return;
         }
-        // Waiting for TAKELOG_START — do not block live telemetry.
+        // Ожидание TAKELOG_START — живую телеметрию не блокируем.
     }
 
     QStringList parts = line.split(QRegExp("\\s+"), Qt::SkipEmptyParts);
 
-    // col1: pitch milli-rad → degrees; col2: gyro deci-deg/s → deg/s; col3: torque×1000
+    // Телеметрия log 1: col0 milli-rad→°, col2 decideg/s→°/с, col3 момент×1000
     if (currentLogMode == 1) {
         const unsigned mask = pitchTelMaskFromUi();
         unsigned need = 0;
@@ -1207,7 +1232,7 @@ void Dialog::handleLogLine(const QString &line)
                 if (!ok)
                     goto after_telemetry;
                 m_lastTelPitchMilliRad = v;
-                // milli-rad → rad → degrees
+                // milli-rad → градусы для графика и 3D
                 const float pitchDeg = float(v) * kMilliRadToRad * kRadToDeg;
                 m_pitchDegFiltered += m_attAlpha * (pitchDeg - m_pitchDegFiltered);
             }
@@ -1215,7 +1240,7 @@ void Dialog::handleLogLine(const QString &line)
                 const int v = parts[idx++].toInt(&ok);
                 if (!ok)
                     goto after_telemetry;
-                m_lastTelPitchOmegaMilli = v;  // deci-deg/s
+                m_lastTelPitchOmegaMilli = v;  // decideg/s (0.1 °/с)
             }
             if (mask & 4u) {
                 const int v = parts[idx++].toInt(&ok);
@@ -1232,7 +1257,7 @@ void Dialog::handleLogLine(const QString &line)
     }
 after_telemetry:
 
-    // remaining: params, text...
+    // Остальное: вывод параметров Flash в textEditLog
     if (capturingParams) {
         if (line.contains(" = ")) {
             ui->textEditLog->append(line);
@@ -1263,6 +1288,7 @@ void Dialog::sendCommand(const QString &cmd)
 
 void Dialog::on_push_arm_clicked()
 {
+    // Безопасность: arm только при тяге 0.
     if (ui->verticalSliderThrust->value() > 0) {
         qDebug() << "Cannot arm: stick not at safe position";
         ui->verticalSliderThrust->setValue(0);
@@ -1281,7 +1307,7 @@ void Dialog::on_push_disarm_clicked()
     isArmed = false;
     updateArmUi();
 
-    // always zero thrust on disarm
+    // disarm: тяга 0, сброс setpoint pitch/roll, снова только pitch.
     ui->verticalSliderThrust->setValue(0);
     sendCommand("mtr 4 0");
     sendCommand("p SetRl 0");
@@ -1315,22 +1341,23 @@ void Dialog::handleSerialData()
     }
 }
 
-// ===== CHECKBOX ENABLE/DISABLE CONTROL CHANNELS (dscnl) =====
+// ===== Включение/отключение каналов момента (команда dscnl) =====
 
 void Dialog::on_checkBoxPitch_toggled(bool checked)
 {
     if (checked) {
-        // enable pitch channel = dscnl 2 0
+        // Включить pitch: dscnl 2 0 (сброс регуляторов на борту)
         sendCommand("dscnl 2 0");
         exitManualMode();
     } else {
-        // disable pitch channel = dscnl 2 1
+        // Выключить pitch: dscnl 2 1
         sendCommand("dscnl 2 1");
     }
 }
 
 void Dialog::on_btnDisableAll_clicked()
 {
+    // Все каналы автоматики выкл. → ручной режим Front/Rear
     sendCommand("dscnl 4 1");
     ui->checkBoxPitch->blockSignals(true);
     ui->checkBoxPitch->setChecked(false);
@@ -1352,7 +1379,7 @@ void Dialog::on_btnGetParams_clicked()
     sendCommand("p");
 }
 
-// ===== LOG ON/OFF =====
+// ===== Живой график (log 1 / log 2) =====
 
 void Dialog::startLiveLog()
 {

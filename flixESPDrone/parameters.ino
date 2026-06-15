@@ -1,7 +1,5 @@
-// Copyright (c) 2024 Oleg Kalachev <okalachev@gmail.com>
-// Repository: https://github.com/okalachev/flix
-
-// Parameters storage in flash memory
+// parameters.ino — хранение параметров во Flash (namespace «flix», команда save).
+// Таблица parameters[] связывает имя CLI (p <name>) с переменной в RAM.
 
 #include <Preferences.h>
 #include "util.h"
@@ -27,9 +25,9 @@ extern float smcVMax, smcLpfAlpha, smcLpfTau;
 Preferences storage;
 
 struct Parameter {
-	const char *name; // max length is 16
+	const char *name; // макс. 16 символов (ограничение Preferences)
 	float *variable;
-	float value; // cache
+	float value; // кэш при чтении из Flash
 };
 
 Parameter parameters[] = {

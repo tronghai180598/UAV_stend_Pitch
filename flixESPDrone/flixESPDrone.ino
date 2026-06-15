@@ -1,7 +1,7 @@
-// Copyright (c) 2023 Oleg Kalachev <okalachev@gmail.com>
-// Repository: https://github.com/okalachev/flix
-
-// Main firmware file
+// flixESPDrone.ino — главный цикл прошивки ESP32.
+//
+// loop: readIMU → step → estimate → control → sendMotors → recordTakeLog
+//       → handleInput → logData → continueDumpTakeLog
 
 #include "vector.h"
 #include "quaternion.h"
@@ -9,19 +9,19 @@
 #define SERIAL_BAUDRATE 115200
 #define WIFI_ENABLED 1
 
-float t = NAN; // current step time, s
-float dt; // time delta from previous step, s
+float t = NAN; // время текущего шага, с
+float dt;      // шаг dt с прошлого цикла, с
 float controlRoll, controlPitch, controlYaw, controlThrottle;
-// Roll/pitch: milliradians (SetRl/SetPt, MAVLink x/y, RC mapped); yaw/throttle: normalized as before
+// Roll/pitch: millirad (SetRl/SetPt); yaw/throttle — нормированные
 float controlMode = NAN;
-Vector gyro; // bias-corrected gyro after rotate — angular rate for PD-PI/KrenCtrl (rad/s if LSB→rad/s scale is correct)
-Vector gyro_pid; // bias-corrected, raw MPU6050 LSB after rotate (debug / legacy)
-float roll_acc_rad, pitch_acc_rad; // acc angle (rad), atan2 on filtered acc
-Vector acc; // accelerometer data (sensor units / filtered pipeline)
-Vector rates; // filtered angular rates (rad/s), updated in controlAttitude
-Quaternion attitude; // estimated attitude
-bool landed; // are we landed and stationary
-float motors[4]; // normalized motors thrust in range [0..1]
+Vector gyro;       // угловая скорость для PD-PI (после rotate), рад/с
+Vector gyro_pid;   // сырой gyro MPU6050 в LSB (отладка)
+float roll_acc_rad, pitch_acc_rad; // угол по acc (рад)
+Vector acc;        // акселерометр (после калибровки / ФНЧ)
+Vector rates;      // угловые скорости (рад/с), ФНЧ в readIMU
+Quaternion attitude; // оценка ориентации (Mahony + acc)
+bool landed;       // на земле и неподвижен
+float motors[4];   // тяга моторов [0..1]
 void setup() {
 	Serial.begin(SERIAL_BAUDRATE);
 	print("Initializing flix\n");
@@ -46,12 +46,12 @@ void loop() {
 		estimate();
 		control();
 		sendMotors();
-		recordTakeLog();  // one high-rate sample per fresh IMU sample (~IMU data-ready rate)
+		recordTakeLog();  // один отсчёт TakeLog на каждый свежий IMU
 	}
 	handleInput();
 #if WIFI_ENABLED
 	processMavlink();
 #endif
 	logData();
-	continueDumpTakeLog();  // non-blocking: send a few CSV lines per loop, control not blocked
+	continueDumpTakeLog();  // неблокирующая отправка CSV takelog
 }

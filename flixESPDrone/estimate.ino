@@ -1,7 +1,5 @@
-// Copyright (c) 2023 Oleg Kalachev <okalachev@gmail.com>
-// Repository: https://github.com/okalachev/flix
-
-// Attitude estimation from gyro and accelerometer
+// estimate.ino — оценка ориентации: кватернион Mahony + comp + Kalman pitch.
+// pitch_comp_rad / pitch_kalman_rad используются при QuatEn=0 и LPF_En=2/3.
 
 #include "quaternion.h"
 #include "vector.h"
@@ -51,16 +49,15 @@ void estimate() {
 }
 
 void applyGyro() {
-	// rates (rad/s) is already LPF-filtered by imu.ino — use directly
+	// rates (рад/с) уже отфильтрованы в imu.ino
 	attitude = Quaternion::rotate(attitude, Quaternion::fromRotationVector(rates * dt));
 }
 
 void applyAcc() {
 	float accNorm = acc.norm();
-	// acc is in raw LSB (ACC_LSB_PER_G ≈ 8192 for ±4g). Skip only if sensor invalid.
-	// Bench 1-DOF: apply correction even when motors active (linear accel is small on bar).
+	// acc в LSB MPU6050; на стенде коррекция даже при работающих моторах.
 	landed = !motorsActive() && abs(accNorm - ACC_LSB_PER_G) < ACC_LSB_PER_G * 0.1f;
-	if (accNorm < ACC_LSB_PER_G * 0.3f) return;  // < 0.3g in LSB → invalid acc
+	if (accNorm < ACC_LSB_PER_G * 0.3f) return;  // < 0.3g — невалидный acc
 
 	// calculate accelerometer gravity correction
 	Vector up = Quaternion::rotateVector(Vector(0, 0, 1), attitude);
@@ -76,7 +73,7 @@ void applyComplementary() {
 		compInit = true;
 		return;
 	}
-	// No-Quaternion path: pitch_comp = alpha*(pitch_comp + rates.y*dt) + (1-alpha)*pitch_acc_rad
+	// Без кватерниона: комплементарный фильтр pitch
 	pitch_comp_rad = compAlpha * (pitch_comp_rad + rates.y * dt)
 	               + (1.0f - compAlpha) * pitch_acc_rad;
 }

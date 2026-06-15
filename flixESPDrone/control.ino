@@ -1,7 +1,8 @@
-// Copyright (c) 2023 Oleg Kalachev <okalachev@gmail.com>
-// Repository: https://github.com/okalachev/flix
-
-// Flight control
+// control.ino — контур управления стендом (pitch / roll / yaw).
+//
+// CtrlAlg: 0 = PD-PI (KrenCtrl), 1 = каскадный PID, 2 = SMC по pitch.
+// getPitchAngle() — единый источник угла pitch для PID/SMC/логов (QuatEn + LPF_En).
+// bnRll/bnPtch/bnYaw: 1 = момент по оси отключён (dscnl), 0 = от регулятора.
 
 #include "vector.h"
 #include "quaternion.h"
@@ -28,17 +29,17 @@ bool armed = false;
 #define ROLLRATE_MAX radians(180)
 PID yawRatePID(YAWRATE_P, YAWRATE_I, YAWRATE_D);
 
-// Angle PID + rate PID (cascade) — SetPt/SetRl: millirad; pitch_acc_rad: rad; rates.y: rad/s.
+// Каскадный PID: внешний контур угол → внутренний ω → момент (±1).
+// SetPt/SetRl в millirad; feedback pitch — getPitchAngle(); roll — roll_acc_rad.
 PID rollPID(3.0f, 0.0f, 0.0f);
 PID pitchPID(3.0f, 0.0f, 0.0f);
 PID rollRatePID(0.2f, 0.02f, 0.01f, 0.4f, 0.1f);
-// Bench pitch defaults; windup>0 required when Ki≠0 (see `PID::update` constrain on I term).
+// Для pitch на стенде; windup>0 нужен при Ki≠0 (см. PID::update).
 PID pitchRatePID(0.2f, 0.02f, 0.01f, 0.4f, 0.1f);
 
-// 0 = PD-PI (KrenCtrl), 1 = cascade PID (acc angle rad + rates rad/s → torque).
+// 0 = PD-PI, 1 = каскадный PID, 2 = SMC (Flash «CtrlAlg»).
 float ctrlAlg = 0.0f;
-// Pitch angle source (Flash "QuatEn"): 0 = pitch_acc_rad (accelerometer),
-// 1 = attitude.getPitch() (quaternion, default).
+// Источник pitch: 1 = кватернион Mahony, 0 = acc/comp/kalman (Flash «QuatEn»).
 float useQuaternion = 1.0f;
 float manualFrontOff = 0.0f;
 float manualRearOff  = 0.0f;
@@ -69,7 +70,7 @@ static float smcOutputLpfAlpha(float dt) {
 	return smcLpfAlpha;
 }
 
-/** SMC pitch torque (±1). Matches bench sim: u=Umax·tanh(K·s/Φ)+Ki∫e, LPF on u. */
+/** Момент SMC по pitch (±1): u = Umax·tanh(K·s/Φ) + Ki∫e, затем ФНЧ. */
 static float computeSmcPitchTorque(float pitch_cmd, float pitch, float rate_y, float dt) {
 	const float e = pitch_cmd - pitch;
 	const float v_sp = constrain(smcLambda * e, -smcVMax, smcVMax);
@@ -104,8 +105,7 @@ extern float controlRoll, controlPitch, controlThrottle, controlYaw, controlMode
 extern float roll_acc_rad, pitch_acc_rad, pitch_comp_rad, pitch_kalman_rad;
 extern Vector gyro_pid;
 
-/** Pitch angle (rad) from Flash "QuatEn" + `LPF_En`:
- *  QuatEn=1 → quaternion; QuatEn=0 + LPF_En=3 → Kalman; LPF_En=2 → Complementary; else acc. */
+/** Угол pitch (рад) для регулятора и телеметрии по QuatEn и LPF_En. */
 float getPitchAngle() {
 	if (useQuaternion >= 0.5f) return attitude.getPitch();
 	if (useLPF >= 2.5f) return pitch_kalman_rad;
@@ -138,7 +138,7 @@ void controlAttitude() {
 	const bool useCascadePid = (ctrlAlg >= 0.5f && ctrlAlg < 1.5f);
 
 	if (useCascadePid) {
-		// SetRl/SetPt stored as millirad; convert to rad to match roll_acc_rad/pitch_acc_rad.
+		// SetRl/SetPt в millirad → рад для сравнения с углом.
 		const float rollSpRad = controlRoll * 0.001f;
 		const float pitchSpRad = controlPitch * 0.001f;
 		const float eRoll = rollSpRad - roll_acc_rad;
@@ -165,8 +165,8 @@ void controlAttitude() {
 	float yawRateSp = controlYaw * YAWRATE_MAX;
 	torqueTarget.z = yawRatePID.update(yawRateSp - rates.z);
 }
-// Default torque mixing: pitch attitude only (single-axis bench setup).
-// bn*=1 disables that axis torque; bn*=0 applies controller torque on that axis.
+// Смешивание моментов на 4 мотора. По умолчанию стенда: только pitch (bnPtch=0).
+// bn*=1 — момент по оси не применяется; bn*=0 — от регулятора.
 uint8_t bnRll = 1, bnPtch = 0, bnYaw = 1, bManualMtr = 0;
 
 void DisableCnl(int cnl, int val) {

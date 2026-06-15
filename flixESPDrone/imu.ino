@@ -1,7 +1,5 @@
-// Copyright (c) 2023 Oleg Kalachev <okalachev@gmail.com>
-// Repository: https://github.com/okalachev/flix
-
-// Work with the IMU sensor
+// imu.ino — MPU6050: acc, gyro, ФНЧ (LPFAlp), углы roll_H/pitch_H для PD-PI.
+// rates (рад/с) — feedback для PID/SMC; gyroBc — до ФНЧ (для шумного лога TakeLog).
 
 #include "lpf.h"
 #include "util.h"
@@ -14,13 +12,13 @@ Vector accBias(0.0, 0.0, 0.0);
 Vector accScale(1.0, 1.0, 1.0);
 constexpr float GYRO_LSB_PER_DPS = 16.4f; // MPU6050 at +-2000 dps
 constexpr float GYRO_DPS_TO_RAD = (float)M_PI / 180.0f;
-// Flash "LPFAlp" — shared by acc/rates LPF (imu) and PID D-term LPF (rate PID)
+// Flash «LPFAlp» — общий для acc/rates и D-составляющей PID
 float lpfAlpha = 0.2f;
 LowPassFilter<Vector> accFilter(0.2f);
 LowPassFilter<Vector> ratesFilter(0.2f);
 Vector gyroBias;
 Vector gyroRawBias;
-Vector gyroBc;   // bias-corrected gyro (rad/s), before ratesFilter — for noisy logging
+Vector gyroBc;   // gyro после калибровки смещения (рад/с), до ratesFilter
 float useLPF = 1.0f;
 
 float roll_H, pitch_H;

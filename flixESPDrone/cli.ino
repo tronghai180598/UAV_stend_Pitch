@@ -1,7 +1,5 @@
-// Copyright (c) 2023 Oleg Kalachev <okalachev@gmail.com>
-// Repository: https://github.com/okalachev/flix
-
-// Implementation of command line interface
+// cli.ino — текстовый интерфейс команд (Serial / WiFi MAV_Disable).
+// Основные команды Qt: arm, disarm, p, save, dscnl, log, takelog, mtr, sys, mfront, mrear.
 
 #include "vector.h"
 #include "util.h"
@@ -136,10 +134,10 @@ void doCommand(String str, bool echo = false) {
 		print("pitch_acc: %f  pitch_quat: %f  pitch_comp: %f  pitch_kal: %f  LPF_En=%g QuatEn=%g  active: %f\n",
 			pitch_acc_rad, attitude.getPitch(), pitch_comp_rad, pitch_kalman_rad, useLPF, useQuaternion, getPitchAngle());
 
-	}else if (command == "arm") {
+	} else if (command == "arm") {
 		armed = true;
-		pdpiRoll.reset();    // reset Roll controller on arm
-		pdpiPitch.reset();   // reset Pitch controller on arm
+		pdpiRoll.reset();    // сброс регуляторов при arm
+		pdpiPitch.reset();
 		rollPID.reset();
 		pitchPID.reset();
 		rollRatePID.reset();
@@ -149,7 +147,7 @@ void doCommand(String str, bool echo = false) {
 	} else if (command == "disarm") {
 		armed = false;
 		torqueTarget = Vector(0.0f, 0.0f, 0.0f);
-		pdpiRoll.reset();    // reset on disarm
+		pdpiRoll.reset();    // сброс при disarm
 		pdpiPitch.reset();
 		rollPID.reset();
 		pitchPID.reset();
