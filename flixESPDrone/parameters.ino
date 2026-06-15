@@ -5,14 +5,25 @@
 
 #include <Preferences.h>
 #include "util.h"
+#include "pid.h"
 #include "KrenCtrl.hpp"
 
-//extern float channelZero[16];
-//extern float channelMax[16];
-extern float rollChannel, pitchChannel, throttleChannel, yawChannel, armedChannel, modeChannel, tiltMax, mavDisable, controlPitch, controlRoll;
+extern float mavDisable, controlPitch, controlRoll;
 extern KrenCtrl pdpiRoll;
 extern KrenCtrl pdpiPitch;
+extern PID rollPID;
+extern PID pitchPID;
+extern PID rollRatePID;
+extern PID pitchRatePID;
+extern float ctrlAlg;
 extern float kGr;
+extern float useQuaternion;
+extern float useLPF;
+extern float lpfAlpha;
+extern float compAlpha;
+extern float kalQangle, kalQbias, kalRmeas;
+extern float smcLambda, smcK, smcPhi, smcKrate, smcKi, smcIMax;
+extern float smcVMax, smcLpfAlpha, smcLpfTau;
 Preferences storage;
 
 struct Parameter {
@@ -48,62 +59,39 @@ Parameter parameters[] = {
 	{"PTI", &pdpiPitch.mTi},
 	{"PTmu", &pdpiPitch.mTmu},
 
-/*
-	{"ROLLRATE_P", &rollRatePID.p},
-	{"ROLLRATE_I", &rollRatePID.i},
-	{"ROLLRATE_D", &rollRatePID.d},
-	{"ROLLRATE_I_LIM", &rollRatePID.windup},
-	{"PITCHRATE_P", &pitchRatePID.p},
-	{"PITCHRATE_I", &pitchRatePID.i},
-	{"PITCHRATE_D", &pitchRatePID.d},
-	{"PITCHRATE_I_LIM", &pitchRatePID.windup},
-	{"YAWRATE_P", &yawRatePID.p},
-	{"YAWRATE_I", &yawRatePID.i},
-	{"YAWRATE_D", &yawRatePID.d},
 	{"ROLL_P", &rollPID.p},
 	{"ROLL_I", &rollPID.i},
 	{"ROLL_D", &rollPID.d},
 	{"PITCH_P", &pitchPID.p},
 	{"PITCH_I", &pitchPID.i},
 	{"PITCH_D", &pitchPID.d},
-	{"YAW_P", &yawPID.p},
-	{"PITCHRATE_MAX", &maxRate.y},
-	{"ROLLRATE_MAX", &maxRate.x},
-	{"YAWRATE_MAX", &maxRate.z},
-	{"TILT_MAX", &tiltMax},*/
+
+	{"CtrlAlg", &ctrlAlg},
+	{"RRateP", &rollRatePID.p},
+	{"RRateI", &rollRatePID.i},
+	{"RRateD", &rollRatePID.d},
+	{"PRateP", &pitchRatePID.p},
+	{"PRateI", &pitchRatePID.i},
+	{"PRateD", &pitchRatePID.d},
+
   {"MAV_Disable", &mavDisable},
   {"kGyro", &kGr},
-	// imu
-	/*
-	{"ACC_BIAS_X", &accBias.x},
-	{"ACC_BIAS_Y", &accBias.y},
-	{"ACC_BIAS_Z", &accBias.z},
-	
-	{"ACC_SCALE_X", &accScale.x},
-	{"ACC_SCALE_Y", &accScale.y},
-	{"ACC_SCALE_Z", &accScale.z},*/
-	/* rc
-	{"RC_ZERO_0", &channelZero[0]},
-	{"RC_ZERO_1", &channelZero[1]},
-	{"RC_ZERO_2", &channelZero[2]},
-	{"RC_ZERO_3", &channelZero[3]},
-	{"RC_ZERO_4", &channelZero[4]},
-	{"RC_ZERO_5", &channelZero[5]},
-	{"RC_ZERO_6", &channelZero[6]},
-	{"RC_ZERO_7", &channelZero[7]},
-	{"RC_MAX_0", &channelMax[0]},
-	{"RC_MAX_1", &channelMax[1]},
-	{"RC_MAX_2", &channelMax[2]},
-	{"RC_MAX_3", &channelMax[3]},
-	{"RC_MAX_4", &channelMax[4]},
-	{"RC_MAX_5", &channelMax[5]},
-	{"RC_MAX_6", &channelMax[6]},
-	{"RC_MAX_7", &channelMax[7]},
-	{"RC_ROLL", &rollChannel},
-	{"RC_PITCH", &pitchChannel},
-	{"RC_THROTTLE", &throttleChannel},
-	{"RC_YAW", &yawChannel},
-	{"RC_MODE", &modeChannel},*/
+  {"QuatEn", &useQuaternion},
+  {"LPF_En", &useLPF},
+  {"LPFAlp", &lpfAlpha},
+  {"CFAlpha", &compAlpha},
+  {"KQang", &kalQangle},
+  {"KQbias", &kalQbias},
+  {"KRmeas", &kalRmeas},
+  {"SMCLm",  &smcLambda},
+  {"SMCK",   &smcK},
+  {"SMCPhi", &smcPhi},
+  {"SMCKrt", &smcKrate},
+  {"SMCKi",  &smcKi},
+  {"SMCImax",&smcIMax},
+  {"SMCVmax",&smcVMax},
+  {"SMCLpfa",&smcLpfAlpha},
+  {"SMCLpft",&smcLpfTau},
 };
 
 void setupParameters() {

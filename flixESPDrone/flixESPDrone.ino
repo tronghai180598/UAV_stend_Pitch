@@ -6,18 +6,19 @@
 #include "vector.h"
 #include "quaternion.h"
 #include "util.h"
-#include <driver/adc.h>
-extern const adc1_channel_t BAT_CH;  // nếu cần
 #define SERIAL_BAUDRATE 115200
 #define WIFI_ENABLED 1
 
 float t = NAN; // current step time, s
 float dt; // time delta from previous step, s
-float controlRoll, controlPitch, controlYaw, controlThrottle; // pilot's inputs, range [-1, 1]
+float controlRoll, controlPitch, controlYaw, controlThrottle;
+// Roll/pitch: milliradians (SetRl/SetPt, MAVLink x/y, RC mapped); yaw/throttle: normalized as before
 float controlMode = NAN;
-Vector gyro; // gyroscope data
-Vector acc; // accelerometer data, m/s/s
-Vector rates; // filtered angular rates, mrad/s
+Vector gyro; // bias-corrected gyro after rotate — angular rate for PD-PI/KrenCtrl (rad/s if LSB→rad/s scale is correct)
+Vector gyro_pid; // bias-corrected, raw MPU6050 LSB after rotate (debug / legacy)
+float roll_acc_rad, pitch_acc_rad; // acc angle (rad), atan2 on filtered acc
+Vector acc; // accelerometer data (sensor units / filtered pipeline)
+Vector rates; // filtered angular rates (rad/s), updated in controlAttitude
 Quaternion attitude; // estimated attitude
 bool landed; // are we landed and stationary
 float motors[4]; // normalized motors thrust in range [0..1]
@@ -34,22 +35,23 @@ void setup() {
 	setupWiFi();
 #endif
 	setupIMU();
-//	setupRC();
 	setLED(false);
 	print("Initializing complete\n");
 }
 
 void loop() {
-	readIMU();
+	const bool imuUpdated = readIMU();
 	step();
-	//readRC();
-//	estimate();
-	control();
-	sendMotors();
+	if (imuUpdated) {
+		estimate();
+		control();
+		sendMotors();
+		recordTakeLog();  // one high-rate sample per fresh IMU sample (~IMU data-ready rate)
+	}
 	handleInput();
 #if WIFI_ENABLED
 	processMavlink();
 #endif
 	logData();
-	//syncParameters();
+	continueDumpTakeLog();  // non-blocking: send a few CSV lines per loop, control not blocked
 }

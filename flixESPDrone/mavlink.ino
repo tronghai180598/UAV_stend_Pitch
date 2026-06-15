@@ -2,11 +2,11 @@
 // Repository: https://github.com/okalachev/flix
 
 // MAVLink communication
-#define WIFI_ENABLED 1
 #if WIFI_ENABLED
 
 #include <MAVLink.h>
 #include "util.h"
+#include "pid.h"
 
 #define SYSTEM_ID 1
 #define MAVLINK_RATE_SLOW 1
@@ -18,7 +18,6 @@ float mavDisable = 0.0;
 String mavlinkPrintBuffer;
 
 float controlTime;
-//extern float controlTime;
 extern float controlRoll, controlPitch, controlThrottle, controlYaw, controlMode;
 
 void processMavlink() {
@@ -113,8 +112,9 @@ void handleMavlink(const void *_msg) {
 		if (m.target && m.target != SYSTEM_ID) return; // 0 is broadcast
 
 		controlThrottle = m.z / 1000.0f;
-		controlPitch = m.x / 1000.0f;
-		controlRoll = m.y / 1000.0f;
+		/* Same milliradian convention as SetPt/SetRl (±1000 ≈ ±57.3°); cascade ×0.001 → rad. */
+		controlPitch = float(m.x);
+		controlRoll = float(m.y);
 		controlYaw = m.r / 1000.0f;
 		controlMode = NAN;
 		controlTime = t;
@@ -194,16 +194,12 @@ void handleMavlink(const void *_msg) {
 		mavlink_msg_set_attitude_target_decode(&msg, &m);
 		if (m.target_system && m.target_system != SYSTEM_ID) return;
 
-		// copy attitude, rates and thrust targets
-		ratesTarget.x = m.body_roll_rate;
-		ratesTarget.y = -m.body_pitch_rate; // convert to flu
-		ratesTarget.z = -m.body_yaw_rate;
+		// Attitude + thrust for GCS/log; STAB loop does not track these setpoints yet.
 		attitudeTarget.w = m.q[0];
 		attitudeTarget.x = m.q[1];
 		attitudeTarget.y = -m.q[2];
 		attitudeTarget.z = -m.q[3];
 		thrustTarget = m.thrust;
-		ratesExtra = Vector(0, 0, 0);
 
 		if (m.type_mask & ATTITUDE_TARGET_TYPEMASK_ATTITUDE_IGNORE) attitudeTarget.invalidate();
 		armed = m.thrust > 0;
@@ -217,7 +213,6 @@ void handleMavlink(const void *_msg) {
 		if (m.target_system && m.target_system != SYSTEM_ID) return;
 
 		attitudeTarget.invalidate();
-		ratesTarget.invalidate();
 		torqueTarget.invalidate();
 		memcpy(motors, m.controls, sizeof(motors)); // copy motor thrusts
 		armed = motors[0] > 0 || motors[1] > 0 || motors[2] > 0 || motors[3] > 0;
@@ -242,14 +237,14 @@ void handleMavlink(const void *_msg) {
 			if (m.param1 && controlThrottle > 0.05) return; // don't arm if throttle is not low
 			accepted = true;
 			armed = m.param1 == 1;
-			// ⚠️ RESET bộ điều khiển khi arm/disarm qua MAVLink
-			if (armed) {
-				pdpiRoll.reset();
-				pdpiPitch.reset();
-			} else {
-				pdpiRoll.reset();
-				pdpiPitch.reset();
-			}
+			// reset controllers on arm/disarm via MAVLink
+			pdpiRoll.reset();
+			pdpiPitch.reset();
+			rollPID.reset();
+			pitchPID.reset();
+			rollRatePID.reset();
+			pitchRatePID.reset();
+			resetSmc();
 		}
 
 		if (m.command == MAV_CMD_DO_SET_MODE) {

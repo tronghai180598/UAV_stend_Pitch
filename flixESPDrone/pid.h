@@ -4,8 +4,8 @@
 // PID controller implementation
 
 #pragma once
-
 #include "lpf.h"
+extern float useLPF;
 
 class PID {
 public:
@@ -26,7 +26,8 @@ public:
 
 		if (dt > 0 && dt < dtMax) {
 			integral += error * dt;
-			derivative = lpf.update((error - prevError) / dt); // compute derivative and apply low-pass filter
+			float rawDeriv = (error - prevError) / dt;
+			derivative = (useLPF >= 0.5f) ? lpf.update(rawDeriv) : rawDeriv;
 		} else {
 			integral = 0;
 			derivative = 0;

@@ -10,6 +10,7 @@
 #include <soc/rtc_cntl_reg.h>
 
 const float ONE_G = 9.80665;
+constexpr float ACC_LSB_PER_G = 8192.0f; // MPU6050 at +-4g
 extern float t;
 
 float mapf(float x, float in_min, float in_max, float out_min, float out_max) {

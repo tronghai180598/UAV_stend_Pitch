@@ -33,12 +33,10 @@ float KrenMdl::updateMdl(float dt, float inp) {
   integr(dt, mAc, mTv, mVi);
   saturate(mVi, -32767,32767);
   integr(dt, mVi, mTf, mFi);
-  //saturatePi(mFi); // pi*1000
   saturate(mFi, -3142,3142);
   return mFi;
 };
 char* KrenMdl::print(char* msg) {
-  //sprintf(msg, " %f %f %f", getFi()/3142*1800, getVi()/20, mAc / 100);
   sprintf(msg, " %f %f %f", getFi()/3142*180, getVi()/3142*18, mAc / 10);
   return msg;
 };

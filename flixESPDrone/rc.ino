@@ -37,9 +37,9 @@ void normalizeRC() {
 	for (int i = 0; i < 16; i++) {
 		controls[i] = mapf(channels[i], channelZero[i], channelMax[i], 0, 1);
 	}
-	// Update control values
-	controlRoll = rollChannel >= 0 ? controls[(int)rollChannel] : NAN;
-	controlPitch = pitchChannel >= 0 ? controls[(int)pitchChannel] : NAN;
+	// Roll/pitch: map to milliradians around 0 (±1000 mrad at stick 0..1) to match cascade + SetRl/SetPt
+	controlRoll = rollChannel >= 0 ? (controls[(int)rollChannel] - 0.5f) * 2000.0f : NAN;
+	controlPitch = pitchChannel >= 0 ? (controls[(int)pitchChannel] - 0.5f) * 2000.0f : NAN;
 	controlYaw = yawChannel >= 0 ? controls[(int)yawChannel] : NAN;
 	controlThrottle = throttleChannel >= 0 ? controls[(int)throttleChannel] : NAN;
 	controlMode = modeChannel >= 0 ? controls[(int)modeChannel] : NAN;

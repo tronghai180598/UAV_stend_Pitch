@@ -3,23 +3,38 @@
 
 // Implementation of command line interface
 
-#include "pid.h"
 #include "vector.h"
 #include "util.h"
+#include "pid.h"
 #include "KrenCtrl.hpp"
 
 
 extern KrenCtrl pdpiRoll;
 extern KrenCtrl pdpiPitch;
+extern PID rollPID;
+extern PID pitchPID;
+extern PID rollRatePID;
+extern PID pitchRatePID;
 
 extern const int MOTOR_REAR_LEFT, MOTOR_REAR_RIGHT, MOTOR_FRONT_RIGHT, MOTOR_FRONT_LEFT;
 extern const int ACRO, STAB, AUTO;
 extern float t, dt, loopRate;
-//extern uint16_t channels[16];
 extern float controlRoll, controlPitch, controlThrottle, controlYaw, controlMode;
 extern int mode, glog;
+extern uint8_t pitchTelMask;
 extern bool armed;
 extern uint8_t bnRll, bnPtch, bnYaw;
+extern float pitch_acc_rad;
+extern float pitch_comp_rad;
+extern float pitch_kalman_rad;
+extern float useQuaternion;
+extern float useLPF;
+extern float getPitchAngle();
+extern float manualFrontOff, manualRearOff;
+extern Vector torqueTarget;
+
+void startTakeLog();
+void cancelTakeLogDump();
 
 const char* motd =
 "\nWelcome to\n"
@@ -42,7 +57,6 @@ const char* motd =
 "arm - arm the drone\n"
 "disarm - disarm the drone\n"
 "stab/acro/auto - set mode\n"
-"rc - show RC data\n"
 "mot - show motor output\n"
 "log - dump in-RAM log\n"
 "cr - calibrate RC\n"
@@ -118,15 +132,30 @@ void doCommand(String str, bool echo = false) {
 		printIMUInfo();
 		printIMUCalibration();
 		print("landed: %d\n", landed);
-	} else if (command == "arm") {
+	} else if (command == "pit") {
+		print("pitch_acc: %f  pitch_quat: %f  pitch_comp: %f  pitch_kal: %f  LPF_En=%g QuatEn=%g  active: %f\n",
+			pitch_acc_rad, attitude.getPitch(), pitch_comp_rad, pitch_kalman_rad, useLPF, useQuaternion, getPitchAngle());
+
+	}else if (command == "arm") {
 		armed = true;
-		pdpiRoll.reset();    // ⚠️ RESET bộ điều khiển Roll khi arm
-		pdpiPitch.reset();   // ⚠️ RESET bộ điều khiển Pitch khi arm
+		pdpiRoll.reset();    // reset Roll controller on arm
+		pdpiPitch.reset();   // reset Pitch controller on arm
+		rollPID.reset();
+		pitchPID.reset();
+		rollRatePID.reset();
+		pitchRatePID.reset();
+		resetSmc();
 		print("Drone armed - Controllers reset\n");
 	} else if (command == "disarm") {
 		armed = false;
-		pdpiRoll.reset();    // ⚠️ RESET khi disarm
+		torqueTarget = Vector(0.0f, 0.0f, 0.0f);
+		pdpiRoll.reset();    // reset on disarm
 		pdpiPitch.reset();
+		rollPID.reset();
+		pitchPID.reset();
+		rollRatePID.reset();
+		pitchRatePID.reset();
+		resetSmc();
 		print("Drone disarmed - Controllers reset\n");
 	} else if (command == "stab") {
 		mode = STAB;
@@ -134,26 +163,28 @@ void doCommand(String str, bool echo = false) {
 		mode = ACRO;
 	} else if (command == "auto") {
 		mode = AUTO;
-	/*} else if (command == "rc") {
-		print("channels: ");
-		for (int i = 0; i < 16; i++) {
-			print("%u ", channels[i]);
-		}
-		print("\nroll: %g pitch: %g yaw: %g throttle: %g mode: %g\n",
-			controlRoll, controlPitch, controlYaw, controlThrottle, controlMode);
-		print("mode: %s\n", getModeName());
-		print("armed: %d\n", armed);*/
 	} else if (command == "mot") {
 		print("front-right %g front-left %g rear-right %g rear-left %g\n",
 			motors[MOTOR_FRONT_RIGHT], motors[MOTOR_FRONT_LEFT], motors[MOTOR_REAR_RIGHT], motors[MOTOR_REAR_LEFT]);
+	} else if (command == "logtel" && arg0 != "") {
+		int v = arg0.toInt();
+		if (v >= 0 && v <= 7) {
+			pitchTelMask = (uint8_t)v;
+			if (pitchTelMask == 0)
+				pitchTelMask = 7;
+			print("pitchTelMask=%u\n", (unsigned)pitchTelMask);
+		}
+	} else if (command == "takelog") {
+		startTakeLog();
 	} else if (command == "log") {
 		if (arg0 != "") {
-			glog = arg0.toInt();
-			if ((glog < 0 ) || (glog > 3)) glog = 0;
+			int v = arg0.toInt();
+			if ((v < 0 ) || (v > 2)) v = 0;
+			if (v != 0)
+				cancelTakeLogDump();
+			glog = v;
 		}
 		else dumpLog();
-	} else if (command == "cr") {
-		//calibrateRC();
 	} else if (command == "ca") {
 		calibrateAccel();
 	} else if (command == "spdpi") {
@@ -197,6 +228,10 @@ void doCommand(String str, bool echo = false) {
 	} else if (command == "reset") {
 		attitude = Quaternion();
 		ESP.restart();
+	} else if (command == "mfront" && arg0 != "") {
+		manualFrontOff = constrain(arg0.toInt(), -500, 500) / 1000.0f;
+	} else if (command == "mrear" && arg0 != "") {
+		manualRearOff = constrain(arg0.toInt(), -500, 500) / 1000.0f;
 	} else {
 		print("Invalid command: %s\n", command.c_str());
 	}

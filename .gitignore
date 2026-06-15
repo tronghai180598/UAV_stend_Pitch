@@ -1,0 +1,29 @@
+# Qt build outputs
+Qt_file/Makefile
+Qt_file/Qt_Flix
+Qt_file/*.o
+Qt_file/moc_*
+Qt_file/ui_*
+Qt_file/.qmake.stash
+Qt_file/moc_predefs.h
+*.pro.user
+
+# Arduino / firmware build cache
+.arduino-build/
+
+# Local dev tools
+.codegraph/
+.playwright-mcp/
+.cursor/
+
+# Experiment logs (generated at runtime)
+log/*.csv
+log/*.png
+log/*.pg
+log_*.csv
+log_*.png
+*.pg
+
+# Editor
+.vscode/
+*.code-workspace

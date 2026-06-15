@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1318</width>
-    <height>600</height>
+    <width>1880</width>
+    <height>1000</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -62,47 +62,27 @@
   <widget class="QSlider" name="verticalSliderThrust">
    <property name="geometry">
     <rect>
-     <x>10</x>
-     <y>270</y>
-     <width>16</width>
-     <height>160</height>
+     <x>695</x>
+     <y>468</y>
+     <width>741</width>
+     <height>22</height>
     </rect>
    </property>
    <property name="maximum">
     <number>1000</number>
    </property>
    <property name="value">
-    <number>1</number>
+    <number>0</number>
    </property>
    <property name="orientation">
-    <enum>Qt::Vertical</enum>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="checkBoxRoll">
-   <property name="geometry">
-    <rect>
-     <x>140</x>
-     <y>210</y>
-     <width>81</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="text">
-    <string>Roll on</string>
+    <enum>Qt::Horizontal</enum>
    </property>
   </widget>
   <widget class="QCheckBox" name="checkBoxPitch">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>210</y>
+     <x>203</x>
+     <y>254</y>
      <width>92</width>
      <height>23</height>
     </rect>
@@ -117,12 +97,15 @@
    <property name="text">
     <string>Pitch on</string>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
   </widget>
   <widget class="QPushButton" name="btnDisableAll">
    <property name="geometry">
     <rect>
-     <x>200</x>
-     <y>240</y>
+     <x>50</x>
+     <y>250</y>
      <width>141</width>
      <height>31</height>
     </rect>
@@ -135,7 +118,7 @@
     </font>
    </property>
    <property name="text">
-    <string>Disable All</string>
+    <string>Disable</string>
    </property>
    <property name="autoDefault">
     <bool>false</bool>
@@ -177,7 +160,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>0.1</string>
+    <string>0.2</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="lineEdit_Kdv">
@@ -222,10 +205,10 @@
   <widget class="QLabel" name="label_4">
    <property name="geometry">
     <rect>
-     <x>30</x>
-     <y>440</y>
-     <width>67</width>
-     <height>17</height>
+     <x>628</x>
+     <y>468</y>
+     <width>58</width>
+     <height>22</height>
     </rect>
    </property>
    <property name="font">
@@ -237,26 +220,6 @@
    </property>
    <property name="text">
     <string>Thrust</string>
-   </property>
-  </widget>
-  <widget class="QCheckBox" name="checkBoxYaw">
-   <property name="geometry">
-    <rect>
-     <x>330</x>
-     <y>210</y>
-     <width>81</width>
-     <height>23</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <pointsize>12</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="text">
-    <string>Yaw on</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_5">
@@ -321,7 +284,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>0.4</string>
+    <string>0.3</string>
    </property>
   </widget>
   <widget class="QLabel" name="label_7">
@@ -625,8 +588,8 @@
     <rect>
      <x>420</x>
      <y>70</y>
-     <width>191</width>
-     <height>461</height>
+     <width>195</width>
+     <height>900</height>
     </rect>
    </property>
   </widget>
@@ -658,15 +621,15 @@
     <rect>
      <x>620</x>
      <y>60</y>
-     <width>671</width>
-     <height>411</height>
+     <width>1020</width>
+     <height>400</height>
     </rect>
    </property>
   </widget>
   <widget class="QPushButton" name="btnLogOn">
    <property name="geometry">
     <rect>
-     <x>830</x>
+     <x>994</x>
      <y>10</y>
      <width>121</width>
      <height>41</height>
@@ -689,7 +652,7 @@
   <widget class="QPushButton" name="btnLogOff">
    <property name="geometry">
     <rect>
-     <x>980</x>
+     <x>1144</x>
      <y>10</y>
      <width>121</width>
      <height>41</height>
@@ -709,38 +672,107 @@
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QProgressBar" name="progressBar">
+  <widget class="QLabel" name="labelSerialState">
    <property name="geometry">
     <rect>
-     <x>40</x>
-     <y>270</y>
-     <width>71</width>
-     <height>141</height>
+     <x>819</x>
+     <y>10</y>
+     <width>160</width>
+     <height>41</height>
     </rect>
    </property>
-   <property name="contextMenuPolicy">
-    <enum>Qt::DefaultContextMenu</enum>
+   <property name="font">
+    <font>
+     <pointsize>14</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
    </property>
-   <property name="acceptDrops">
+   <property name="text">
+    <string>Not connected</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignCenter</set>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBoxLogTelPitchAng">
+   <property name="geometry">
+    <rect>
+     <x>630</x>
+     <y>498</y>
+     <width>160</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="visible">
     <bool>false</bool>
    </property>
-   <property name="maximum">
-    <number>1000</number>
+   <property name="text">
+    <string>Pitch θ (rad)</string>
    </property>
-   <property name="value">
-    <number>0</number>
-   </property>
-   <property name="textVisible">
+   <property name="checked">
     <bool>true</bool>
    </property>
-   <property name="orientation">
-    <enum>Qt::Horizontal</enum>
+  </widget>
+  <widget class="QCheckBox" name="checkBoxLogTelPitchRate">
+   <property name="geometry">
+    <rect>
+     <x>790</x>
+     <y>498</y>
+     <width>170</width>
+     <height>22</height>
+    </rect>
    </property>
-   <property name="invertedAppearance">
+   <property name="visible">
     <bool>false</bool>
    </property>
-   <property name="textDirection">
-    <enum>QProgressBar::BottomToTop</enum>
+   <property name="text">
+    <string>Pitch ω rad/s</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="checkBoxLogTelPitchCtrl">
+   <property name="geometry">
+    <rect>
+     <x>970</x>
+     <y>498</y>
+     <width>170</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="visible">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>u pitch ×1000</string>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="labelThrustPercent">
+   <property name="geometry">
+    <rect>
+     <x>1446</x>
+     <y>468</y>
+     <width>56</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="font">
+    <font>
+     <pointsize>12</pointsize>
+     <weight>75</weight>
+     <bold>true</bold>
+    </font>
+   </property>
+   <property name="text">
+    <string>0%</string>
+   </property>
+   <property name="alignment">
+    <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
    </property>
   </widget>
   <widget class="QLabel" name="labelArmState">
@@ -763,45 +795,13 @@
     <string>Contact</string>
    </property>
   </widget>
-  <widget class="QLabel" name="label_18">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>130</y>
-     <width>71</width>
-     <height>20</height>
-    </rect>
-   </property>
-   <property name="font">
-    <font>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
-   </property>
-   <property name="text">
-    <string>Set Roll</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="lineEdit_setRl">
-   <property name="geometry">
-    <rect>
-     <x>90</x>
-     <y>130</y>
-     <width>61</width>
-     <height>25</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>0</string>
-   </property>
-  </widget>
   <widget class="QLabel" name="label_19">
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>170</y>
-     <width>71</width>
-     <height>20</height>
+     <y>171</y>
+     <width>130</width>
+     <height>22</height>
     </rect>
    </property>
    <property name="font">
@@ -811,15 +811,15 @@
     </font>
    </property>
    <property name="text">
-    <string>Set Pitch</string>
+    <string>Желаемый угол</string>
    </property>
   </widget>
   <widget class="QLineEdit" name="lineEdit_setPitch">
    <property name="geometry">
     <rect>
-     <x>90</x>
+     <x>152</x>
      <y>170</y>
-     <width>61</width>
+     <width>80</width>
      <height>25</height>
     </rect>
    </property>
@@ -934,8 +934,8 @@
   <widget class="QCheckBox" name="checkBoxPlotTorque">
    <property name="geometry">
     <rect>
-     <x>1160</x>
-     <y>490</y>
+     <x>1130</x>
+     <y>390</y>
      <width>121</width>
      <height>23</height>
     </rect>
@@ -950,8 +950,8 @@
   <widget class="QCheckBox" name="checkBoxPlotKlmGyro">
    <property name="geometry">
     <rect>
-     <x>1000</x>
-     <y>490</y>
+     <x>970</x>
+     <y>390</y>
      <width>131</width>
      <height>23</height>
     </rect>
@@ -966,8 +966,8 @@
   <widget class="QCheckBox" name="checkBoxPlotGyro">
    <property name="geometry">
     <rect>
-     <x>890</x>
-     <y>490</y>
+     <x>860</x>
+     <y>390</y>
      <width>92</width>
      <height>23</height>
     </rect>
@@ -982,8 +982,8 @@
   <widget class="QCheckBox" name="checkBoxPlotKlmRoll">
    <property name="geometry">
     <rect>
-     <x>740</x>
-     <y>490</y>
+     <x>710</x>
+     <y>390</y>
      <width>111</width>
      <height>23</height>
     </rect>
@@ -998,8 +998,8 @@
   <widget class="QCheckBox" name="checkBoxPlotRoll">
    <property name="geometry">
     <rect>
-     <x>660</x>
-     <y>490</y>
+     <x>630</x>
+     <y>390</y>
      <width>92</width>
      <height>23</height>
     </rect>
@@ -1028,34 +1028,406 @@
     </font>
    </property>
    <property name="text">
-    <string>Take Log</string>
+    <string>Dump Log</string>
    </property>
    <property name="autoDefault">
     <bool>false</bool>
    </property>
   </widget>
-  <widget class="QPushButton" name="btnLog2">
+  <widget class="QWidget" name="uav3dHost" native="true">
    <property name="geometry">
     <rect>
-     <x>1120</x>
-     <y>10</y>
-     <width>121</width>
-     <height>41</height>
+     <x>620</x>
+     <y>500</y>
+     <width>1020</width>
+     <height>480</height>
     </rect>
    </property>
-   <property name="font">
-    <font>
-     <pointsize>15</pointsize>
-     <weight>75</weight>
-     <bold>true</bold>
-    </font>
+   <widget class="QWidget" name="verticalLayoutWidget">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>1020</width>
+      <height>480</height>
+     </rect>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout"/>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBoxPitchSource">
+   <property name="geometry">
+    <rect>
+     <x>1670</x>
+     <y>5</y>
+     <width>200</width>
+     <height>110</height>
+    </rect>
    </property>
-   <property name="text">
-    <string>Log Um</string>
+   <property name="title">
+    <string>Pitch source</string>
    </property>
-   <property name="autoDefault">
-    <bool>false</bool>
+   <widget class="QRadioButton" name="rbQuaternion">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>22</y>
+      <width>182</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Quaternion</string>
+    </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="rbNoPitchQuat">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>52</y>
+      <width>182</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>No Quaternion</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBoxManual">
+   <property name="geometry">
+    <rect>
+     <x>1660</x>
+     <y>120</y>
+     <width>180</width>
+     <height>195</height>
+    </rect>
    </property>
+   <property name="title">
+    <string>Manual mode</string>
+   </property>
+   <widget class="QLabel" name="labelManualMode">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>18</y>
+      <width>170</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Manual OFF</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>43</y>
+      <width>40</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Front:</string>
+    </property>
+   </widget>
+   <widget class="QSlider" name="sliderManualFront">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>62</y>
+      <width>170</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="minimum">
+     <number>-500</number>
+    </property>
+    <property name="maximum">
+     <number>500</number>
+    </property>
+    <property name="value">
+     <number>0</number>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+   </widget>
+   <widget class="QProgressBar" name="progressManualFront">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>88</y>
+      <width>170</width>
+      <height>15</height>
+     </rect>
+    </property>
+    <property name="minimum">
+     <number>-500</number>
+    </property>
+    <property name="maximum">
+     <number>500</number>
+    </property>
+    <property name="value">
+     <number>0</number>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>110</y>
+      <width>40</width>
+      <height>18</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Rear:</string>
+    </property>
+   </widget>
+   <widget class="QSlider" name="sliderManualRear">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>130</y>
+      <width>170</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="minimum">
+     <number>-500</number>
+    </property>
+    <property name="maximum">
+     <number>500</number>
+    </property>
+    <property name="value">
+     <number>0</number>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+   </widget>
+   <widget class="QProgressBar" name="progressManualRear">
+    <property name="geometry">
+     <rect>
+      <x>5</x>
+      <y>156</y>
+      <width>170</width>
+      <height>15</height>
+     </rect>
+    </property>
+    <property name="minimum">
+     <number>-500</number>
+    </property>
+    <property name="maximum">
+     <number>500</number>
+    </property>
+    <property name="value">
+     <number>0</number>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBoxLPF">
+   <property name="geometry">
+    <rect>
+     <x>1660</x>
+     <y>320</y>
+     <width>180</width>
+     <height>155</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>IMU Filter</string>
+   </property>
+   <widget class="QRadioButton" name="rbUseLPF">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>18</y>
+      <width>162</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Use LPF</string>
+    </property>
+    <property name="checked">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="rbNoLPF">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>45</y>
+      <width>162</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>No LPF</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="rbCompFilt">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>72</y>
+      <width>162</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Complementary</string>
+    </property>
+   </widget>
+   <widget class="QRadioButton" name="rbKalmanFilt">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>96</y>
+      <width>162</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Kalman</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_LPFAlpha">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>124</y>
+      <width>80</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>α LPF</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_LPFAlpha">
+    <property name="geometry">
+     <rect>
+      <x>92</x>
+      <y>122</y>
+      <width>78</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0.2</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBoxComp">
+   <property name="geometry">
+    <rect>
+     <x>1660</x>
+     <y>480</y>
+     <width>180</width>
+     <height>70</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Complementary Filter</string>
+   </property>
+   <widget class="QLabel" name="label_CFAlpha">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>28</y>
+      <width>80</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>α (gyro)</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_CFAlpha">
+    <property name="geometry">
+     <rect>
+      <x>92</x>
+      <y>26</y>
+      <width>78</width>
+      <height>26</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0.98</string>
+    </property>
+   </widget>
+  </widget>
+  <widget class="QGroupBox" name="groupBoxKalman">
+   <property name="geometry">
+    <rect>
+     <x>1660</x>
+     <y>555</y>
+     <width>180</width>
+     <height>70</height>
+    </rect>
+   </property>
+   <property name="title">
+    <string>Kalman Filter</string>
+   </property>
+   <widget class="QLabel" name="label_KQang">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>24</y>
+      <width>80</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Q angle</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_KQang">
+    <property name="geometry">
+     <rect>
+      <x>92</x>
+      <y>22</y>
+      <width>78</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0.001</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="label_KRmeas">
+    <property name="geometry">
+     <rect>
+      <x>8</x>
+      <y>50</y>
+      <width>80</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>R meas</string>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="lineEdit_KRmeas">
+    <property name="geometry">
+     <rect>
+      <x>92</x>
+      <y>48</y>
+      <width>78</width>
+      <height>22</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>0.03</string>
+    </property>
+   </widget>
   </widget>
  </widget>
  <customwidgets>
